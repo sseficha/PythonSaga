@@ -1,0 +1,15 @@
+FROM python:3.12
+
+RUN pip install poetry==2.*
+
+WORKDIR /code
+ENV PYTHONPATH=/code
+
+COPY ./pyproject.toml /code/pyproject.toml
+COPY ./poetry.lock /code/poetry.lock
+
+RUN poetry install
+
+COPY . /code
+
+CMD ["poetry", "run", "fastapi", "run", "input/app/main.py", "--port", "80", "--reload"]

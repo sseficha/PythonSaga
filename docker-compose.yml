@@ -1,0 +1,43 @@
+services:
+  order-api:
+    build:
+      context: order
+      dockerfile: Dockerfile.api
+    volumes:
+      - ./order:/code/
+    ports:
+      - "80:80"
+  order-workers:
+    build:
+      context: order
+      dockerfile: Dockerfile.workers
+    volumes:
+      - ./order:/code/
+
+  order-db:
+    restart: always
+    build:
+      context: order
+      dockerfile: Dockerfile.db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: order_db
+    ports:
+      - "5432:5432"
+
+  product-workers:
+    build:
+      context: product
+    volumes:
+        - ./product:/code/
+  rabbitmq:
+    image: rabbitmq:3-management
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+  redis:
+    image: redis:latest
+    ports:
+      - "6379:6379"
+

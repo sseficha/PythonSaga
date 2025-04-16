@@ -1,0 +1,15 @@
+FROM python:3.12
+
+RUN pip install poetry==2.*
+
+WORKDIR /code
+
+COPY ./pyproject.toml /code/pyproject.toml
+COPY ./poetry.lock /code/poetry.lock
+
+RUN poetry config virtualenvs.create false
+RUN poetry install
+
+COPY . /code
+
+CMD ["watchmedo", "auto-restart", "--patterns=*.py", "--directory=./input/celery_tasks", "--recursive", "--", "celery", "-A", "input.celery_tasks.main:app", "worker", "-l", "INFO"]
