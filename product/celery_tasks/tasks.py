@@ -1,13 +1,19 @@
 import logging
 import random
+import time
 
 from .main import app
 
 
-@app.task(name="reserve_stock", bind=True)
-def reserve_stock(self, order_id) -> bool:
-    logging.info(self)
-    logging.info(self.request)
-    logging.info(f"Reserving stock for order id {order_id}")
-    # Simulate stock reservation result
-    return {"order_id": order_id, "has_stock": random.choice([True, False])}
+@app.task(name="reserve_stock")
+def reserve_stock(order) -> dict:
+    logging.info(f"Reserving stock for order {order}")
+    time.sleep(2)
+    return {"order": order, "has_stock": random.choice([True, False])}
+
+
+@app.task(name="free_stock")
+def free_stock(order) -> dict:
+    logging.info(f"Freeing stock of order {order}")
+    time.sleep(2)
+    return order

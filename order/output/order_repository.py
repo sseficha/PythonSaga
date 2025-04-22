@@ -1,4 +1,7 @@
+import logging
 from typing import Optional
+
+from psycopg.rows import class_row, dict_row
 
 from business.domains.order import Order, OrderStates
 from output.base_repository import BaseRepository
@@ -8,12 +11,12 @@ class OrderRepository(BaseRepository[Order]):
     def __init__(self, connection):
         self.connection = connection
 
-    def add(self, order: Order):
+    def add(self, order: Order) -> int:
         with self.connection.cursor() as cursor:
-            order_id, created_at = cursor.execute(
-                "INSERT INTO orders (user_id, state) VALUES (%(user_id)s, %(state)s) RETURNING id, created_at",
+            order_id = cursor.execute(
+                "INSERT INTO orders (user_id, state) VALUES (%(user_id)s, %(state)s) RETURNING id",
                 {"user_id": order.user_id, "state": order.state},
-            ).fetchone()
+            ).fetchone()[0]
 
             for item in order.items:
                 cursor.execute(
@@ -21,23 +24,41 @@ class OrderRepository(BaseRepository[Order]):
                     "(%(order_id)s, %(item_id)s, %(quantity)s, %(price_per_unit)s)",
                     {
                         "order_id": order_id,
+                        "item_id": item.item_id,
+                        "quantity": item.quantity,
+                        "price_per_unit": item.price_per_unit,
+                    },
+                )
+        return order_id
+
+    def get_by_id(self, order_id: int) -> Optional[Order]:
+        with self.connection.cursor(row_factory=dict_row) as cursor:
+            res = cursor.execute(
+                """SELECT * FROM orders
+                    INNER JOIN order_items
+                    ON orders.id = order_items.order_id
+                    WHERE orders.id = %(order_id)s""",
+                {"order_id": order_id},
+            ).fetchall()
+        if not res:
+            return None
+        return Order(
+            id=res[0]["id"],
+            created_at=res[0]["created_at"],
+            state=res[0]["state"],
+            user_id=res[0]["user_id"],
+            items=[
+                Order.OrderItem(
+                    **{
+                        "id": item["id"],
                         "item_id": item["item_id"],
                         "quantity": item["quantity"],
                         "price_per_unit": item["price_per_unit"],
-                    },
+                    }
                 )
-        order.id = order_id
-        order.created_at = created_at
-
-    def get_by_id(self, order_id: int) -> Optional[Order]:
-        pass
-        # cursor = self.connection.cursor()
-        # cursor.execute("SELECT id, name, age FROM persons WHERE id=?",
-        #                (person_id,))
-        # row = cursor.fetchone()
-        # if row:
-        #     return Person(row[1], row[2], row[0])
-        # return None
+                for item in res
+            ],
+        )
 
     def update_state(self, order_id: int, state: OrderStates):
         with self.connection.cursor() as cursor:
