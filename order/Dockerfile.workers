@@ -12,4 +12,4 @@ RUN poetry install
 
 COPY . /code
 
-CMD ["watchmedo", "auto-restart", "--patterns=*.py", "--directory=.", "--recursive", "--", "celery", "-A", "input.celery_tasks.main:app", "worker", "-l", "INFO"]
+CMD ["watchmedo", "auto-restart", "--patterns=*.py", "--directory=.", "--recursive", "--", "celery", "-A", "input.celery_tasks.main:app", "worker","-Q", "create_order_saga_reply_channel,order_request_channel", "-l", "INFO"]

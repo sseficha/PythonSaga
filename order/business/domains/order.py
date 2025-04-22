@@ -1,4 +1,3 @@
-from dataclasses import dataclass
 from datetime import datetime
 from enum import StrEnum
 from typing import Optional
@@ -11,6 +10,7 @@ class OrderStates(StrEnum):
     STOCK_RESERVATION_FAILED = "stock_reservation_failed"
     FUND_CHECK_PENDING = "fund_check_pending"
     FUND_CHECK_FAILED = "fund_check_failed"
+    FUND_CHECK_SUCCEEDED = "fund_check_succeeded"
     COMPLETED = "completed"
     CANCELED = "canceled"
     PENDING = "pending"
@@ -20,6 +20,7 @@ class Order(BaseModel):
 
     id: Optional[int] = None
     created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
     state: OrderStates = OrderStates.PENDING
     user_id: int
 

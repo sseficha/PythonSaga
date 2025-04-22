@@ -20,6 +20,7 @@ def check_saga_state(step: str, state: Enum):
             OrderStates.STOCK_RESERVATION_FAILED,
             OrderStates.FUND_CHECK_FAILED,
         ],
+        "approve_order": [OrderStates.FUND_CHECK_SUCCEEDED],
     }
     try:
         if state not in allowed_state_map[step]:

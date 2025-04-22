@@ -1,7 +1,6 @@
-import logging
 from typing import Optional
 
-from psycopg.rows import class_row, dict_row
+from psycopg.rows import dict_row
 
 from business.domains.order import Order, OrderStates
 from output.base_repository import BaseRepository
@@ -45,6 +44,7 @@ class OrderRepository(BaseRepository[Order]):
         return Order(
             id=res[0]["id"],
             created_at=res[0]["created_at"],
+            updated_at=res[0]["updated_at"],
             state=res[0]["state"],
             user_id=res[0]["user_id"],
             items=[
@@ -66,8 +66,3 @@ class OrderRepository(BaseRepository[Order]):
                 "UPDATE orders SET state = %(state)s WHERE id = %(id)s",
                 {"id": order_id, "state": state},
             )
-
-    def delete(self, order_id: int):
-        pass
-        # cursor = self.connection.cursor()
-        # cursor.execute("DELETE FROM persons WHERE id=?", (person_id,))

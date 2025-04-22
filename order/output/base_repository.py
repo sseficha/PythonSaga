@@ -19,11 +19,6 @@ class BaseRepository(ABC, Generic[T]):
         raise NotImplementedError()
 
     @abstractmethod
-    def delete(self, item_id: int):
-        """Delete an existing item from a repository"""
-        raise NotImplementedError()
-
-    @abstractmethod
     def get_by_id(self, item_id: int) -> T:
         """Retrieve an item by its id"""
         raise NotImplementedError()
