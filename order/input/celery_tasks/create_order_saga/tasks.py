@@ -65,6 +65,7 @@ no_funds_compensating_chain = chain(
 approve_order_chain = chain(approve_order.s().set(queue="order_request_channel"))
 
 orchestrator = CreateOrderSagaOrchestrator(
+    start_saga=partial(start_create_order_saga.delay),
     reserve_stock=partial(reserve_stock_chain.delay),
     check_funds=partial(check_funds_chain.delay),
     no_funds_compensate=partial(no_funds_compensating_chain.delay),

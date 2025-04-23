@@ -21,15 +21,20 @@ class CreateOrderSagaOrchestrator:
 
     def __init__(
         self,
+        start_saga: Callable,
         reserve_stock: Callable,
         check_funds: Callable,
         no_funds_compensate: Callable,
         approve_order: Callable,
     ):
-        self.reserve_stock = reserve_stock
-        self.check_funds = check_funds
-        self.no_funds_compensate = no_funds_compensate
-        self.approve_order = approve_order
+        self.__start_saga = start_saga
+        self.__reserve_stock = reserve_stock
+        self.__check_funds = check_funds
+        self.__no_funds_compensate = no_funds_compensate
+        self.__approve_order = approve_order
+
+    def initiate(self, order: Order):
+        self.__start_saga(order)
 
     @staticmethod
     def check_saga_state(step: str, state: OrderStates):
@@ -46,7 +51,7 @@ class CreateOrderSagaOrchestrator:
             order = order_service.update_order_state(
                 order.id, OrderStates.STOCK_RESERVATION_PENDING
             )
-        self.reserve_stock(order.model_dump())
+        self.__reserve_stock(order.model_dump())
 
     def handle_reserve_stock_reply(self, reply: ReserveStockReply):
         order = reply.order
@@ -57,7 +62,7 @@ class CreateOrderSagaOrchestrator:
                 order = order_service.update_order_state(
                     order.id, OrderStates.FUND_CHECK_PENDING
                 )
-                self.check_funds(order.model_dump())
+                self.__check_funds(order.model_dump())
             else:
                 order_service.update_order_state(
                     order.id, OrderStates.STOCK_RESERVATION_FAILED
@@ -72,12 +77,12 @@ class CreateOrderSagaOrchestrator:
                 order = order_service.update_order_state(
                     order.id, OrderStates.FUND_CHECK_SUCCEEDED
                 )
-                self.approve_order(order.model_dump())
+                self.__approve_order(order.model_dump())
             else:
                 order = order_service.update_order_state(
                     order.id, OrderStates.FUND_CHECK_FAILED
                 )
-                self.no_funds_compensate(order.model_dump())
+                self.__no_funds_compensate(order.model_dump())
 
     def approve_order(self, order: Order):
         self.check_saga_state("approve_order", order.state)
