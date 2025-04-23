@@ -1,8 +1,10 @@
 from celery import Celery
 
+from config import RABBITMQ_CONNECTION, REDIS_CONNECTION
+
 app = Celery(
     "celery_tasks",
-    broker="amqp://guest:guest@rabbitmq:5672//",
-    backend="redis://redis:6379/0",
+    broker=RABBITMQ_CONNECTION,
+    backend=REDIS_CONNECTION,
     include=["input.celery_tasks.create_order_saga.tasks"],
 )
