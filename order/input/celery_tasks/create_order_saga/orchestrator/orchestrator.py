@@ -1,15 +1,19 @@
 import logging
-from typing import Callable
 
 from business.domains.order import Order, OrderStates
 from config import ORDER_DB_CONNECTION
-
+from input.celery_tasks.create_order_saga.celery_adapter import (
+    CeleryAdapter,
+)
 
 from input.celery_tasks.create_order_saga.orchestrator.exceptions import (
     InvalidSagaStateError,
 )
 
-from input.celery_tasks.create_order_saga.orchestrator.states import ALLOWED_STATE_MAP
+from input.celery_tasks.create_order_saga.orchestrator.states import (
+    ALLOWED_STATE_MAP,
+    SagaStep,
+)
 from input.celery_tasks.create_order_saga.schemas import (
     ReserveStockReply,
     FundCheckReply,
@@ -21,23 +25,15 @@ class CreateOrderSagaOrchestrator:
 
     def __init__(
         self,
-        start_saga: Callable,
-        reserve_stock: Callable,
-        check_funds: Callable,
-        no_funds_compensate: Callable,
-        approve_order: Callable,
+        celery_adapter: CeleryAdapter,
     ):
-        self.__start_saga = start_saga
-        self.__reserve_stock = reserve_stock
-        self.__check_funds = check_funds
-        self.__no_funds_compensate = no_funds_compensate
-        self.__approve_order = approve_order
+        self.celery_adapter = celery_adapter
 
     def initiate(self, order: Order):
-        self.__start_saga(order)
+        self.celery_adapter.start_saga(order)
 
     @staticmethod
-    def check_saga_state(step: str, state: OrderStates):
+    def check_saga_state(step: SagaStep, state: OrderStates):
         try:
             if state not in ALLOWED_STATE_MAP[step]:
                 raise InvalidSagaStateError(step, state)
@@ -45,47 +41,37 @@ class CreateOrderSagaOrchestrator:
             raise ValueError(f"Invalid step name: {step}")
 
     def start_create_order_saga(self, order: Order):
-        self.check_saga_state("start_create_order_saga", order.state)
+        self.check_saga_state(SagaStep.START, order.state)
         logging.info("Saga started")
         with postgres_adapter_order_service(ORDER_DB_CONNECTION) as order_service:
-            order = order_service.update_order_state(
-                order.id, OrderStates.STOCK_RESERVATION_PENDING
-            )
-        self.__reserve_stock(order.model_dump())
+            order = order_service.update_order_state(order.id, OrderStates.STOCK_RESERVATION_PENDING)
+        self.celery_adapter.reserve_stock(order)
 
     def handle_reserve_stock_reply(self, reply: ReserveStockReply):
         order = reply.order
-        self.check_saga_state("handle_reserve_stock_reply", order.state)
+        self.check_saga_state(SagaStep.RESERVE_REPLY, order.state)
         logging.info(f"Order {order} has stock: {reply.has_stock}")
         with postgres_adapter_order_service(ORDER_DB_CONNECTION) as order_service:
             if reply.has_stock:
-                order = order_service.update_order_state(
-                    order.id, OrderStates.FUND_CHECK_PENDING
-                )
-                self.__check_funds(order.model_dump())
+                order = order_service.update_order_state(order.id, OrderStates.FUND_CHECK_PENDING)
+                self.celery_adapter.check_funds(order)
             else:
-                order_service.update_order_state(
-                    order.id, OrderStates.STOCK_RESERVATION_FAILED
-                )
+                order_service.update_order_state(order.id, OrderStates.STOCK_RESERVATION_FAILED)
 
     def handle_fund_check_reply(self, reply: FundCheckReply):
         order = reply.order
-        self.check_saga_state("handle_fund_check_reply", order.state)
+        self.check_saga_state(SagaStep.FUND_REPLY, order.state)
         logging.info(f"Order {order} has funds: {reply.has_funds}")
         with postgres_adapter_order_service(ORDER_DB_CONNECTION) as order_service:
             if reply.has_funds:
-                order = order_service.update_order_state(
-                    order.id, OrderStates.FUND_CHECK_SUCCEEDED
-                )
-                self.__approve_order(order.model_dump())
+                order = order_service.update_order_state(order.id, OrderStates.FUND_CHECK_SUCCEEDED)
+                self.celery_adapter.approve_order(order)
             else:
-                order = order_service.update_order_state(
-                    order.id, OrderStates.FUND_CHECK_FAILED
-                )
-                self.__no_funds_compensate(order.model_dump())
+                order = order_service.update_order_state(order.id, OrderStates.FUND_CHECK_FAILED)
+                self.celery_adapter.no_funds_compensate(order)
 
     def approve_order(self, order: Order):
-        self.check_saga_state("approve_order", order.state)
+        self.check_saga_state(SagaStep.APPROVE, order.state)
         logging.info(f"Approving order {order}")
         with postgres_adapter_order_service(ORDER_DB_CONNECTION) as order_service:
             order_service.update_order_state(order.id, OrderStates.COMPLETED)

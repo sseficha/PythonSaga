@@ -17,5 +17,5 @@ def create_order(order_in: OrderIn) -> Order:
     order = Order(**{**order_in.model_dump(), **{"items": order_items}})
     with postgres_adapter_order_service(ORDER_DB_CONNECTION) as order_service:
         order = order_service.create_order(order)
-    create_saga_orchestrator.initiate(order.model_dump())
+    create_saga_orchestrator.initiate(order)
     return order
