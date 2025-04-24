@@ -2,31 +2,18 @@ import logging
 
 from business.domains.order import Order, OrderStates
 from config import ORDER_DB_CONNECTION
-from input.celery_tasks.create_order_saga.celery_adapter import (
-    CeleryAdapter,
-)
+from input.celery_tasks.create_order_saga.celery_adapter import CeleryAdapter
 
-from input.celery_tasks.create_order_saga.orchestrator.exceptions import (
-    InvalidSagaStateError,
-)
+from input.celery_tasks.create_order_saga.orchestrator.exceptions import InvalidSagaStateError
 
-from input.celery_tasks.create_order_saga.orchestrator.states import (
-    ALLOWED_STATE_MAP,
-    SagaStep,
-)
-from input.celery_tasks.create_order_saga.schemas import (
-    ReserveStockReply,
-    FundCheckReply,
-)
+from input.celery_tasks.create_order_saga.orchestrator.states import ALLOWED_STATE_MAP, SagaStep
+from input.celery_tasks.create_order_saga.schemas import ReserveStockReply, FundCheckReply
 from output.utils import postgres_adapter_order_service
 
 
 class CreateOrderSagaOrchestrator:
 
-    def __init__(
-        self,
-        celery_adapter: CeleryAdapter,
-    ):
+    def __init__(self, celery_adapter: CeleryAdapter):
         self.celery_adapter = celery_adapter
 
     def initiate(self, order: Order):
