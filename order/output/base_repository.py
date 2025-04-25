@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import TypeVar, Generic, Type, Optional
+from typing import TypeVar, Generic, Optional
 from abc import ABC, abstractmethod
 
 T = TypeVar("T")
