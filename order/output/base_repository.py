@@ -12,7 +12,7 @@ class BaseRepository(ABC, Generic[T]):
         raise NotImplementedError()
 
     @abstractmethod
-    def update_state(self, item_id: int, state: Type[Enum]):
+    def update_state(self, item_id: int, state: Enum):
         raise NotImplementedError()
 
     @abstractmethod

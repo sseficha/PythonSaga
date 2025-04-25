@@ -6,7 +6,7 @@ from business.domains.order import Order, OrderStates
 from output.base_repository import BaseRepository
 
 
-class OrderRepository(BaseRepository[Order]):
+class PostgresOrderRepository(BaseRepository[Order]):
     def __init__(self, connection):
         self.connection = connection
 

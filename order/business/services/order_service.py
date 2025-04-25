@@ -1,10 +1,10 @@
 from business.domains.order import Order, OrderStates
-from output.order_repository import OrderRepository
+from output.base_repository import BaseRepository
 
 
 class OrderService:
 
-    def __init__(self, repository: OrderRepository):
+    def __init__(self, repository: BaseRepository[Order]):
         self.repository = repository
 
     def create_order(self, order: Order) -> Order:
