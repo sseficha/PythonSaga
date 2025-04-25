@@ -1,7 +1,7 @@
 import logging
+import os
 
 from business.domains.order import Order, OrderStates
-from config import ORDER_DB_CONNECTION
 from input.celery_tasks.create_order_saga.celery_adapter import CeleryAdapter
 
 from input.celery_tasks.create_order_saga.orchestrator.exceptions import InvalidSagaStateError
@@ -17,7 +17,11 @@ class CreateOrderSagaOrchestrator:
         self.celery_adapter = celery_adapter
 
     def initiate(self, order: Order):
-        self.celery_adapter.start_saga(order)
+        self.check_saga_state(SagaStep.START, order.state)
+        logging.info("Saga started")
+        with order_service_postgres_context(os.environ["ORDER_DB_CONNECTION"]) as order_service:
+            order = order_service.update_order_state(order.id, OrderStates.STOCK_RESERVATION_PENDING)
+        self.celery_adapter.reserve_stock(order)
 
     @staticmethod
     def check_saga_state(step: SagaStep, state: OrderStates):
@@ -27,18 +31,11 @@ class CreateOrderSagaOrchestrator:
         except KeyError:
             raise ValueError(f"Invalid step name: {step}")
 
-    def start_create_order_saga(self, order: Order):
-        self.check_saga_state(SagaStep.START, order.state)
-        logging.info("Saga started")
-        with order_service_postgres_context(ORDER_DB_CONNECTION) as order_service:
-            order = order_service.update_order_state(order.id, OrderStates.STOCK_RESERVATION_PENDING)
-        self.celery_adapter.reserve_stock(order)
-
     def handle_reserve_stock_reply(self, reply: ReserveStockReply):
         order = reply.order
         self.check_saga_state(SagaStep.RESERVE_REPLY, order.state)
         logging.info(f"Order {order} has stock: {reply.has_stock}")
-        with order_service_postgres_context(ORDER_DB_CONNECTION) as order_service:
+        with order_service_postgres_context(os.environ["ORDER_DB_CONNECTION"]) as order_service:
             if reply.has_stock:
                 order = order_service.update_order_state(order.id, OrderStates.FUND_CHECK_PENDING)
             else:
@@ -50,7 +47,7 @@ class CreateOrderSagaOrchestrator:
         order = reply.order
         self.check_saga_state(SagaStep.FUND_REPLY, order.state)
         logging.info(f"Order {order} has funds: {reply.has_funds}")
-        with order_service_postgres_context(ORDER_DB_CONNECTION) as order_service:
+        with order_service_postgres_context(os.environ["ORDER_DB_CONNECTION"]) as order_service:
             if reply.has_funds:
                 order = order_service.update_order_state(order.id, OrderStates.FUND_CHECK_SUCCEEDED)
             else:
@@ -63,5 +60,5 @@ class CreateOrderSagaOrchestrator:
     def approve_order(self, order: Order):
         self.check_saga_state(SagaStep.APPROVE, order.state)
         logging.info(f"Approving order {order}")
-        with order_service_postgres_context(ORDER_DB_CONNECTION) as order_service:
+        with order_service_postgres_context(os.environ["ORDER_DB_CONNECTION"]) as order_service:
             order_service.update_order_state(order.id, OrderStates.COMPLETED)

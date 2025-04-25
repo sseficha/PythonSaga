@@ -5,14 +5,32 @@ services:
       dockerfile: Dockerfile.api
     volumes:
       - ./order:/code/
+    depends_on:
+      - order-db
+      - product-workers
+      - accounting-workers
+      - order-workers
     ports:
       - "80:80"
+    environment:
+      ORDER_DB_CONNECTION: ${ORDER_DB_CONNECTION}
+      RABBITMQ_CONNECTION: ${RABBITMQ_CONNECTION}
+      REDIS_CONNECTION: ${REDIS_CONNECTION}
+
+
   order-workers:
     build:
       context: order
       dockerfile: Dockerfile.workers
     volumes:
       - ./order:/code/
+    depends_on:
+      - redis
+      - rabbitmq
+    environment:
+      ORDER_DB_CONNECTION: ${ORDER_DB_CONNECTION}
+      RABBITMQ_CONNECTION: ${RABBITMQ_CONNECTION}
+      REDIS_CONNECTION: ${REDIS_CONNECTION}
 
   order-db:
     restart: always
@@ -31,12 +49,24 @@ services:
       context: product
     volumes:
         - ./product:/code/
+    environment:
+      RABBITMQ_CONNECTION: ${RABBITMQ_CONNECTION}
+      REDIS_CONNECTION: ${REDIS_CONNECTION}
+    depends_on:
+        - redis
+        - rabbitmq
 
   accounting-workers:
     build:
       context: accounting
     volumes:
       - ./accounting:/code/
+    environment:
+      RABBITMQ_CONNECTION: ${RABBITMQ_CONNECTION}
+      REDIS_CONNECTION: ${REDIS_CONNECTION}
+    depends_on:
+        - redis
+        - rabbitmq
 
   rabbitmq:
     image: rabbitmq:3-management

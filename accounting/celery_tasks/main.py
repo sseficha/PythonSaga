@@ -1,10 +1,10 @@
-from celery import Celery
+import os
 
-from .config import RABBITMQ_CONNECTION, REDIS_CONNECTION
+from celery import Celery
 
 app = Celery(
     "celery_tasks",
-    broker=RABBITMQ_CONNECTION,
-    backend=REDIS_CONNECTION,
+    broker=os.environ["RABBITMQ_CONNECTION"],
+    backend=os.environ["REDIS_CONNECTION"],
     include=["celery_tasks.tasks"],
 )
