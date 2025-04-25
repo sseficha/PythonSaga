@@ -10,7 +10,7 @@ class SagaStep(str, Enum):
     APPROVE = "approve_order"
 
 
-ALLOWED_STATE_MAP = {
+ALLOWED_STATES_FOR_STEP = {
     SagaStep.START: [OrderStates.PENDING],
     SagaStep.RESERVE_REPLY: [OrderStates.STOCK_RESERVATION_PENDING],
     SagaStep.FUND_REPLY: [OrderStates.FUND_CHECK_PENDING],

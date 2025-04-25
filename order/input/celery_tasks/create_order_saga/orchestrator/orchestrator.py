@@ -6,7 +6,7 @@ from input.celery_tasks.create_order_saga.celery_adapter import CeleryAdapter
 
 from input.celery_tasks.create_order_saga.orchestrator.exceptions import InvalidSagaStateError, OrderNotFoundError
 
-from input.celery_tasks.create_order_saga.orchestrator.states import ALLOWED_STATE_MAP, SagaStep
+from input.celery_tasks.create_order_saga.orchestrator.states import ALLOWED_STATES_FOR_STEP, SagaStep
 from input.celery_tasks.create_order_saga.schemas import ReserveStockReply, FundCheckReply
 from output.utils import order_service_postgres_context
 
@@ -26,7 +26,7 @@ class CreateOrderSagaOrchestrator:
     @staticmethod
     def check_saga_state(step: SagaStep, state: OrderStates):
         try:
-            if state not in ALLOWED_STATE_MAP[step]:
+            if state not in ALLOWED_STATES_FOR_STEP[step]:
                 raise InvalidSagaStateError(step, state)
         except KeyError:
             raise ValueError(f"Invalid step name: {step}")
