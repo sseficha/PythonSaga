@@ -17,13 +17,13 @@ class CeleryAdapter:
         self.__approve_order = approve_order
 
     def reserve_stock(self, order: Order):
-        self.__reserve_stock.delay(order.model_dump())
+        self.__reserve_stock.delay(order.id, [item.model_dump() for item in order.items])
 
     def check_funds(self, order: Order):
-        self.__check_funds.delay(order.model_dump())
+        self.__check_funds.delay(order.id, order.user_id, order.total_price)
 
     def no_funds_compensate(self, order: Order):
-        self.__no_funds_compensate.delay(order.model_dump())
+        self.__no_funds_compensate.delay(order.id, [item.model_dump() for item in order.items])
 
     def approve_order(self, order: Order):
-        self.__approve_order.delay(order.model_dump())
+        self.__approve_order.delay(order.id)

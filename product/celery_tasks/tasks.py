@@ -6,14 +6,14 @@ from .main import app
 
 
 @app.task(name="reserve_stock")
-def reserve_stock(order) -> dict:
-    logging.info(f"Reserving stock for order {order}")
+def reserve_stock(order_id, items) -> dict:
+    logging.info(f"Reserving stock items {items} for order {order_id}")
     time.sleep(2)
-    return {"order": order, "has_stock": random.choice([True, False])}
+    return {"order_id": order_id, "has_stock": random.choice([True, False])}
 
 
 @app.task(name="free_stock")
-def free_stock(order) -> dict:
-    logging.info(f"Freeing stock of order {order}")
+def free_stock(order_id, items) -> int:
+    logging.info(f"Freeing stock items {items} of order {order_id}")
     time.sleep(2)
-    return order
+    return order_id

@@ -4,10 +4,10 @@ from business.domains.order import Order
 
 
 class ReserveStockReply(BaseModel):
-    order: Order
+    order_id: int
     has_stock: bool
 
 
 class FundCheckReply(BaseModel):
-    order: Order
+    order_id: int
     has_funds: bool

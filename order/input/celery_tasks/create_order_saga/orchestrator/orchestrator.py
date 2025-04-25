@@ -4,7 +4,7 @@ import os
 from business.domains.order import Order, OrderStates
 from input.celery_tasks.create_order_saga.celery_adapter import CeleryAdapter
 
-from input.celery_tasks.create_order_saga.orchestrator.exceptions import InvalidSagaStateError
+from input.celery_tasks.create_order_saga.orchestrator.exceptions import InvalidSagaStateError, OrderNotFoundError
 
 from input.celery_tasks.create_order_saga.orchestrator.states import ALLOWED_STATE_MAP, SagaStep
 from input.celery_tasks.create_order_saga.schemas import ReserveStockReply, FundCheckReply
@@ -32,10 +32,11 @@ class CreateOrderSagaOrchestrator:
             raise ValueError(f"Invalid step name: {step}")
 
     def handle_reserve_stock_reply(self, reply: ReserveStockReply):
-        order = reply.order
-        self.check_saga_state(SagaStep.RESERVE_REPLY, order.state)
-        logging.info(f"Order {order} has stock: {reply.has_stock}")
         with order_service_postgres_context(os.environ["ORDER_DB_CONNECTION"]) as order_service:
+            order = order_service.get_order_by_id(reply.order_id)
+            if order is None:
+                raise OrderNotFoundError(reply.order_id)
+            self.check_saga_state(SagaStep.RESERVE_REPLY, order.state)
             if reply.has_stock:
                 order = order_service.update_order_state(order.id, OrderStates.FUND_CHECK_PENDING)
             else:
@@ -44,10 +45,11 @@ class CreateOrderSagaOrchestrator:
             self.celery_adapter.check_funds(order)
 
     def handle_fund_check_reply(self, reply: FundCheckReply):
-        order = reply.order
-        self.check_saga_state(SagaStep.FUND_REPLY, order.state)
-        logging.info(f"Order {order} has funds: {reply.has_funds}")
         with order_service_postgres_context(os.environ["ORDER_DB_CONNECTION"]) as order_service:
+            order = order_service.get_order_by_id(reply.order_id)
+            if order is None:
+                raise OrderNotFoundError(reply.order_id)
+            self.check_saga_state(SagaStep.FUND_REPLY, order.state)
             if reply.has_funds:
                 order = order_service.update_order_state(order.id, OrderStates.FUND_CHECK_SUCCEEDED)
             else:
@@ -57,8 +59,10 @@ class CreateOrderSagaOrchestrator:
         else:
             self.celery_adapter.no_funds_compensate(order)
 
-    def approve_order(self, order: Order):
-        self.check_saga_state(SagaStep.APPROVE, order.state)
-        logging.info(f"Approving order {order}")
+    def approve_order(self, order_id: int):
         with order_service_postgres_context(os.environ["ORDER_DB_CONNECTION"]) as order_service:
+            order = order_service.get_order_by_id(order_id)
+            if order is None:
+                raise OrderNotFoundError(order_id)
+            self.check_saga_state(SagaStep.APPROVE, order.state)
             order_service.update_order_state(order.id, OrderStates.COMPLETED)

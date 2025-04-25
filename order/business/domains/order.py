@@ -41,4 +41,8 @@ class Order(BaseModel):
             raise ValueError("Order does not meet the minimum amount")
 
     def reaches_order_minimum(self) -> bool:
-        return sum(item.price_per_unit * item.quantity for item in self.items) >= 10
+        return self.total_price >= 10
+
+    @property
+    def total_price(self) -> float:
+        return sum(item.price_per_unit * item.quantity for item in self.items)

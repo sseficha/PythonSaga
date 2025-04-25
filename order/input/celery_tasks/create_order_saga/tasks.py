@@ -20,9 +20,9 @@ def handle_fund_check_reply(reply: FundCheckReply):
     orchestrator.handle_fund_check_reply(reply)
 
 
-@app.task(name=SagaStep.APPROVE.value, pydantic=True)
-def approve_order(order: Order):
-    orchestrator.approve_order(order)
+@app.task(name=SagaStep.APPROVE.value)
+def approve_order(order_id: int):
+    orchestrator.approve_order(order_id)
 
 
 reserve_stock_chain = chain(
