@@ -8,8 +8,6 @@ T = TypeVar("T")
 
 class BaseRepository(ABC, Generic[T]):
 
-    conn_str: str = None
-
     @classmethod
     @contextmanager
     def connect(cls):
