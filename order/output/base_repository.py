@@ -1,3 +1,4 @@
+from contextlib import contextmanager
 from enum import Enum
 from typing import TypeVar, Generic, Optional
 from abc import ABC, abstractmethod
@@ -6,6 +7,13 @@ T = TypeVar("T")
 
 
 class BaseRepository(ABC, Generic[T]):
+
+    conn_str: str = None
+
+    @classmethod
+    @contextmanager
+    def connect(cls):
+        raise NotImplementedError()
 
     @abstractmethod
     def add(self, item: T) -> int:
