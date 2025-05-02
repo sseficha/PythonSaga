@@ -54,8 +54,6 @@ class PostgresOrderRepository(BaseRepository[Order]):
             ).fetchall()
         if not res:
             return None
-        print("*" * 100)
-        print(res)
         return Order(
             id=res[0]["order_id"],
             created_at=res[0]["created_at"],
