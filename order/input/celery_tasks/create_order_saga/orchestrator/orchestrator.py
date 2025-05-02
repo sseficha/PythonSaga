@@ -41,10 +41,10 @@ class CreateOrderSagaOrchestrator:
         self.check_saga_state(SagaStep.RESERVE_REPLY, order.state)
         if reply.has_stock:
             order = order_service.update_order_state(order.id, OrderStates.FUND_CHECK_PENDING)
+            self.celery_adapter.check_funds(order)
+
         else:
             order_service.update_order_state(order.id, OrderStates.STOCK_RESERVATION_FAILED)
-        if reply.has_stock:
-            self.celery_adapter.check_funds(order)
 
     def handle_fund_check_reply(self, reply: FundCheckReply):
         order_service = OrderService(PostgresOrderRepository)
@@ -54,11 +54,10 @@ class CreateOrderSagaOrchestrator:
         self.check_saga_state(SagaStep.FUND_REPLY, order.state)
         if reply.has_funds:
             order = order_service.update_order_state(order.id, OrderStates.FUND_CHECK_SUCCEEDED)
+            self.celery_adapter.approve_order(order)
+
         else:
             order = order_service.update_order_state(order.id, OrderStates.FUND_CHECK_FAILED)
-        if reply.has_funds:
-            self.celery_adapter.approve_order(order)
-        else:
             self.celery_adapter.no_funds_compensate(order)
 
     def approve_order(self, order_id: int):
